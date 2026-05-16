@@ -3,36 +3,732 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Learn Japanese</title>
+    <title>Bunny | Japanese Learning</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        softPink: '#fff5f7',
+                        petalPink: '#ffb3c1',
+                        deepRose: '#ff4d6d',
+                        heartPink: '#ff758f',
+                        goldBorder: 'rgba(212, 175, 55, 0.2)',
+                    },
+                    fontFamily: {
+                        serif: ['Playfair Display', 'serif'],
+                        sans: ['Quicksand', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@300;500;600;700&family=Playfair+Display:ital,wght@0,600;1,500&display=swap" rel="stylesheet">
+    
     <style>
         body {
-            font-family: Arial, sans-serif;
-            margin: 0;
-            padding: 20px;
-            background-color: #f5f5f5;
+            background-color: #fff5f7;
+            color: #594145;
+            cursor: none !important;
+            overflow-x: hidden;
+            min-height: 100vh;
         }
-        .container {
-            max-width: 800px;
-            margin: 0 auto;
-            background-color: white;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+
+        /* --- PINK HEART CURSOR --- */
+        #cursor-main {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 18px;
+            height: 18px;
+            background-color: #ff4d6d;
+            transform: translate(-50%, -50%) rotate(45deg);
+            pointer-events: none;
+            z-index: 10001;
+            box-shadow: 0 0 15px rgba(255, 77, 109, 0.4);
         }
-        h1 {
-            color: #333;
+        #cursor-main::before, #cursor-main::after {
+            content: '';
+            position: absolute;
+            width: 18px;
+            height: 18px;
+            background-color: #ff4d6d;
+            border-radius: 50%;
+        }
+        #cursor-main::before { left: -9px; }
+        #cursor-main::after { top: -9px; }
+
+        #cursor-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            pointer-events: none;
+            z-index: 10000;
+        }
+
+        /* Disable custom cursor on mobile/touch devices for better usability */
+        @media (hover: none) and (pointer: coarse) {
+            body, .phrase-card, input, ul, li, .pagination-btn, .filter-btn, .play-btn { cursor: auto !important; }
+            #cursor-main, #cursor-canvas { display: none !important; }
+        }
+
+        /* --- ELEGANT PHRASE CARDS --- */
+        .phrase-card {
+            background: linear-gradient(145deg, #ffffff, #fff0f3);
+            border-radius: 24px;
+            aspect-ratio: 1 / 1.1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 1rem;
+            transition: all 0.5s cubic-bezier(0.23, 1, 0.32, 1);
+            position: relative;
+            overflow: hidden;
+            box-shadow: 10px 10px 25px rgba(255, 179, 193, 0.4),
+                       -10px -10px 25px rgba(255, 255, 255, 0.9);
+            border: 2px solid #ffffff;
+        }
+
+        @media (min-width: 768px) {
+            .phrase-card {
+                border-radius: 32px;
+                padding: 1.5rem;
+            }
+        }
+
+        .phrase-card::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            border-radius: inherit;
+            border: 2px solid transparent;
+            background: linear-gradient(135deg, #ffb3c1, transparent) border-box;
+            -webkit-mask: linear-gradient(#fff 0 0) padding-box, linear-gradient(#fff 0 0);
+            mask-composite: exclude;
+            opacity: 0;
+            transition: opacity 0.4s;
+        }
+
+        .phrase-card:hover {
+            transform: translateY(-8px) scale(1.02);
+            box-shadow: 15px 15px 30px rgba(255, 128, 150, 0.3),
+                       -12px -12px 30px rgba(255, 255, 255, 1);
+        }
+        
+        .phrase-card:hover::after {
+            opacity: 1;
+        }
+
+        .play-btn {
+            background: rgba(255, 255, 255, 0.6);
+            backdrop-filter: blur(4px);
+        }
+        .play-btn:hover {
+            background: rgba(255, 179, 193, 0.3);
+            transform: scale(1.1);
+        }
+
+        /* --- MODAL POPUP --- */
+        #modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(255, 245, 247, 0.6);
+            backdrop-filter: blur(12px);
+            z-index: 5000;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 1.5rem;
+        }
+
+        .modal-content {
+            background: linear-gradient(145deg, #ffffff, #fff5f7);
+            width: 100%;
+            max-width: 480px;
+            border-radius: 40px;
+            padding: 3rem 1.5rem;
             text-align: center;
+            position: relative;
+            box-shadow: 20px 20px 60px rgba(255, 128, 150, 0.25),
+                       -20px -20px 60px rgba(255, 255, 255, 0.9);
+            border: 4px solid #ffffff;
         }
-        p {
-            color: #666;
-            line-height: 1.6;
+
+        @media (min-width: 768px) {
+            .modal-content {
+                border-radius: 50px;
+                padding: 4rem 2rem;
+            }
         }
+
+        .btn-reveal {
+            background: #ff4d6d;
+            color: white;
+            padding: 1rem 2rem;
+            border-radius: 99px;
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 0.75rem;
+            letter-spacing: 0.15em;
+            transition: all 0.3s;
+            box-shadow: 0 8px 20px rgba(255, 77, 109, 0.3), inset 0 -3px 0 rgba(0,0,0,0.1);
+        }
+
+        .btn-reveal:hover {
+            background: #ff758f;
+            transform: scale(1.05) translateY(-2px);
+            box-shadow: 0 12px 25px rgba(255, 77, 109, 0.4), inset 0 -3px 0 rgba(0,0,0,0.1);
+        }
+
+        /* Animations */
+        .floating {
+            animation: floating 4s ease-in-out infinite;
+        }
+        @keyframes floating {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-15px); }
+        }
+
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #fff5f7; }
+        ::-webkit-scrollbar-thumb { background: #ffb3c1; border-radius: 10px; }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1>Welcome to Learn Japanese</h1>
-        <p>This is a resource for learning the Japanese language. Get started with your Japanese learning journey today!</p>
+
+    <div id="cursor-main"></div>
+    <canvas id="cursor-canvas"></canvas>
+
+    <header class="pt-16 md:pt-24 pb-4 md:pb-8 text-center px-6 relative z-40">
+        <div class="inline-block mb-4 md:mb-6 floating">
+            <i data-lucide="sparkles" class="text-deepRose w-6 h-6"></i>
+        </div>
+        <h1 class="font-serif text-4xl md:text-6xl text-deepRose mb-3 italic flex justify-center items-center gap-3">
+            Koibito <span class="text-2xl md:text-3xl opacity-80">🌸</span>
+        </h1>
+        <p class="font-sans font-medium text-petalPink tracking-[0.2em] md:tracking-[0.4em] uppercase text-[9px] md:text-[10px]">A Collection of Japanese words for my Bunny</p>
+
+        <div class="flex justify-center gap-2 md:gap-4 mt-8 relative z-50 flex-wrap">
+            <button class="filter-btn bg-deepRose text-white px-5 py-2 rounded-full font-bold text-xs md:text-sm shadow-md transition-all hover:scale-105 cursor-none md:cursor-none border-2 border-white" data-filter="all">All Words 🌸</button>
+            <button class="filter-btn bg-white/80 text-gray-500 hover:bg-petalPink hover:text-white px-5 py-2 rounded-full font-bold text-xs md:text-sm shadow-md transition-all hover:scale-105 cursor-none md:cursor-none border-2 border-white" data-filter="basic">Phrases 🐰</button>
+            <button class="filter-btn bg-white/80 text-gray-500 hover:bg-petalPink hover:text-white px-5 py-2 rounded-full font-bold text-xs md:text-sm shadow-md transition-all hover:scale-105 cursor-none md:cursor-none border-2 border-white" data-filter="filler">Filler Words ✨</button>
+        </div>
+
+        <div class="relative w-full max-w-md mx-auto mt-6 md:mt-8">
+            <div class="relative flex items-center">
+                <i data-lucide="search" class="absolute left-4 w-5 h-5 text-petalPink"></i>
+                <input type="text" id="search-input" placeholder="Search a word..." 
+                       class="w-full py-3 md:py-4 pl-12 pr-6 bg-white/80 backdrop-blur-sm border-2 border-white rounded-full text-gray-700 placeholder-gray-400 focus:outline-none focus:border-petalPink shadow-[5px_5px_15px_rgba(255,179,193,0.3),-5px_-5px_15px_rgba(255,255,255,0.9)] transition-all cursor-none text-sm md:text-base">
+            </div>
+            <ul id="search-dropdown" class="absolute w-full mt-2 bg-white/95 backdrop-blur-md border-2 border-white rounded-2xl md:rounded-3xl shadow-2xl overflow-hidden hidden max-h-48 md:max-h-60 overflow-y-auto z-50 text-left cursor-none">
+            </ul>
+        </div>
+
+        <div id="pagination-controls" class="flex justify-center gap-2 mt-6 flex-wrap z-50 relative cursor-none">
+        </div>
+    </header>
+
+    <main class="max-w-6xl mx-auto grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-10 px-4 md:px-8 pb-32" id="phrase-grid">
+    </main>
+
+    <div id="modal-overlay">
+        <div class="modal-content" id="modal-card">
+            <div class="absolute -top-6 -left-6 text-5xl md:text-6xl rotate-[-20deg] opacity-80 floating" style="animation-delay: -1s;">🐰</div>
+            
+            <button id="close-modal" class="absolute top-6 right-6 text-petalPink hover:text-deepRose transition-colors z-10 p-2 cursor-none md:cursor-none">
+                <i data-lucide="x" class="w-6 h-6"></i>
+            </button>
+            
+            <div id="modal-body" class="relative z-10">
+                <span id="modal-category" class="text-[9px] md:text-[10px] uppercase tracking-[0.4em] text-petalPink mb-4 md:mb-6 block font-bold">Japanese Phrase</span>
+                <div class="flex justify-center items-center gap-3 mb-3 md:mb-4">
+                    <h2 id="modal-jp" class="font-sans text-3xl md:text-5xl font-bold text-deepRose leading-tight"></h2>
+                    <button id="modal-play-btn" class="play-btn text-petalPink hover:text-deepRose transition-colors rounded-full p-2 cursor-none">
+                        <i data-lucide="volume-2" class="w-6 h-6"></i>
+                    </button>
+                </div>
+                <p id="modal-p" class="text-[10px] md:text-[11px] text-gray-500 font-medium tracking-[0.2em] mb-8 md:mb-12"></p>
+                
+                <div id="translation-area" class="opacity-0">
+                    <div class="w-12 md:w-16 h-[2px] bg-petalPink mx-auto mb-6 md:mb-10 rounded-full"></div>
+                    <span class="text-[8px] md:text-[9px] uppercase tracking-[0.4em] text-gray-400 mb-3 md:mb-4 block font-bold">Meaning</span>
+                    <h3 id="modal-en" class="font-sans text-xl md:text-2xl text-gray-700 font-bold"></h3>
+                    <p id="modal-desc" class="text-xs md:text-sm text-gray-500 font-medium mt-4 max-w-[85%] mx-auto leading-relaxed italic hidden"></p>
+                </div>
+
+                <div id="action-area" class="mt-8 md:mt-12">
+                    <button id="reveal-btn" class="btn-reveal cursor-none md:cursor-none">Reveal Meaning</button>
+                </div>
+            </div>
+        </div>
     </div>
+
+    <script>
+        lucide.createIcons();
+
+        // Function to handle Web Speech API for Japanese Text-to-Speech
+        function playJapaneseAudio(text, event) {
+            if (event) event.stopPropagation(); // Prevent modal from opening when clicking the play button
+            
+            // Extract only the Japanese characters for better TTS (remove parentheses content like romaji)
+            const jpText = text.split(' (')[0];
+            
+            const utterance = new SpeechSynthesisUtterance(jpText);
+            utterance.lang = 'ja-JP'; // Set language to Japanese
+            utterance.rate = 0.9; // Slightly slower for learning purposes
+            window.speechSynthesis.speak(utterance);
+        }
+
+        // 1. Basic Japanese Phrases
+        const originalPhrases = [
+            { jp: "愛してる (Aishiteru)", en: "I love you", p: "/ai-shi-te-ru/" },
+            { jp: "恋人 (Koibito)", en: "My love / Sweetheart", p: "/koi-bi-to/" },
+            { jp: "会いたい (Aitai)", en: "I miss you", p: "/ai-tai/" },
+            { jp: "永遠に (Eien ni)", en: "Forever", p: "/ei-en ni/" },
+            { jp: "君だけ (Kimi dake)", en: "Only you", p: "/ki-mi da-ke/" },
+            { jp: "綺麗だよ (Kirei da yo)", en: "You are beautiful", p: "/ki-rei da yo/" },
+            { jp: "可愛い (Kawaii)", en: "You are cute", p: "/ka-wa-i-i/" },
+            { jp: "私のもの (Watashi no mono)", en: "You are mine", p: "/wa-ta-shi no mo-no/" },
+            { jp: "私の心 (Watashi no kokoro)", en: "My heart", p: "/wa-ta-shi no ko-ko-ro/" },
+            { jp: "好きだよ (Suki da yo)", en: "I like you", p: "/su-ki da yo/" },
+            { jp: "気をつけて (Ki o tsukete)", en: "Take care", p: "/ki o tsu-ke-te/" },
+            { jp: "いつも (Itsumo)", en: "Always", p: "/i-tsu-mo/" },
+            { jp: "運命 (Unmei)", en: "Destiny", p: "/un-mei/" },
+            { jp: "おはよう (Ohayou)", en: "Good morning", p: "/o-ha-yo-u/" },
+            { jp: "ありがとう (Arigatou)", en: "Thank you", p: "/a-ri-ga-to-u/" },
+            { jp: "ごめんなさい (Gomen nasai)", en: "I'm sorry", p: "/go-men-na-sai/" },
+            { jp: "はい (Hai)", en: "Yes", p: "/ha-i/" },
+            { jp: "いいえ (Iie)", en: "No", p: "/i-i-e/" },
+            { jp: "食べよう (Tabeyou)", en: "Let's eat", p: "/ta-be-yo-u/" },
+            { jp: "美味しい (Oishii)", en: "Delicious", p: "/o-i-shi-i/" },
+            { jp: "お腹すいた (Onaka suita)", en: "I am hungry", p: "/o-na-ka su-i-ta/" },
+            { jp: "おやすみ (Oyasumi)", en: "Good night / Go to sleep", p: "/o-ya-su-mi/" },
+            { jp: "家 (Ie / Uchi)", en: "Home", p: "/i-e/ /u-chi/" },
+            { jp: "帰ろう (Kaerou)", en: "Let's go home", p: "/ka-e-ro-u/" },
+            { jp: "元気？ (Genki?)", en: "How are you?", p: "/gen-ki/" },
+            { jp: "元気だよ (Genki da yo)", en: "I'm good", p: "/gen-ki da yo/" },
+            { jp: "待ってるよ (Matteru yo)", en: "I will wait for you", p: "/mat-te-ru yo/" },
+            { jp: "ちょっと待って (Chotto matte)", en: "Just a moment", p: "/chot-to mat-te/" },
+            { jp: "急いで (Isoide)", en: "Hurry up", p: "/i-so-i-de/" },
+            { jp: "わかる？ (Wakaru?)", en: "Do you understand?", p: "/wa-ka-ru/" },
+            { jp: "行こう (Ikou)", en: "Let's go", p: "/i-ko-u/" },
+            { jp: "どこ行くの？ (Doko iku no?)", en: "Where are we going?", p: "/do-ko i-ku no/" },
+            { jp: "これ何？ (Kore nani?)", en: "What is this?", p: "/ko-re na-ni/" },
+            { jp: "遅いね (Osoi ne)", en: "It's late", p: "/o-so-i ne/" },
+            { jp: "こんばんは (Konbanwa)", en: "Good evening", p: "/kon-ban-wa/" },
+            { jp: "笑って (Waratte)", en: "Please smile", p: "/wa-rat-te/" },
+            { jp: "疲れた (Tsukareta)", en: "I'm tired", p: "/tsu-ka-re-ta/" },
+            { jp: "幸せ (Shiawase)", en: "I am happy", p: "/shi-a-wa-se/" },
+            { jp: "考えてるよ (Kangaeteru yo)", en: "Thinking of you", p: "/kan-ga-e-te-ru yo/" },
+            { jp: "話して (Hanashite)", en: "Tell a story / Talk to me", p: "/ha-na-shi-te/" },
+            { jp: "行くね (Iku ne)", en: "Leaving now", p: "/i-ku ne/" },
+            { jp: "また明日 (Mata ashita)", en: "Tomorrow again", p: "/ma-ta a-shi-ta/" },
+            { jp: "信じて (Shinjite)", en: "Believe me", p: "/shin-ji-te/" },
+            { jp: "どういたしまして (Dou itashimashite)", en: "You're welcome", p: "/do-u i-ta-shi-ma-shi-te/" },
+            { jp: "お願い (Onegai)", en: "Please", p: "/o-ne-ga-i/" },
+            { jp: "とても (Totemo)", en: "So much / Very", p: "/to-te-mo/" },
+            { jp: "本当 (Hontou)", en: "True", p: "/hon-to-u/" },
+            { jp: "いつでも (Itsudemo)", en: "Whenever / Always", p: "/i-tsu-de-mo/" },
+            { jp: "蝶 (Chou)", en: "Butterfly", p: "/cho-u/" },
+            { jp: "光 (Hikari)", en: "Light", p: "/hi-ka-ri/" },
+            { jp: "雨 (Ame)", en: "Rain", p: "/a-me/" },
+            { jp: "星 (Hoshi)", en: "Star", p: "/ho-shi/" },
+            { jp: "キスして (Kisu shite)", en: "Kiss me", p: "/ki-su shi-te/" },
+            { jp: "抱きしめて (Dakishimete)", en: "Hug me", p: "/da-ki-shi-me-te/" },
+            { jp: "すごい (Sugoi)", en: "Wow / Amazing", p: "/su-go-i/" },
+            { jp: "買って (Katte)", en: "Buy me (this)", p: "/kat-te/" },
+            { jp: "いくら？ (Ikura?)", en: "How much?", p: "/i-ku-ra/" },
+            { jp: "高い (Takai)", en: "Expensive", p: "/ta-ka-i/" },
+            { jp: "無料 (Muryou / Tada)", en: "Free", p: "/mu-ryo-u/ / /ta-da/" },
+            { jp: "これ美味しい (Kore oishii)", en: "This is delicious", p: "/ko-re o-i-shi-i/" },
+            { jp: "嫌だ (Iya da)", en: "I don't want to", p: "/i-ya da/" },
+            { jp: "左 (Hidari)", en: "Left", p: "/hi-da-ri/" },
+            { jp: "右 (Migi)", en: "Right", p: "/mi-gi/" },
+            { jp: "まっすぐ (Massugu)", en: "Straight ahead", p: "/mas-su-gu/" },
+            { jp: "近い (Chikai)", en: "Near", p: "/chi-ka-i/" },
+            { jp: "遠い (Tooi)", en: "Far", p: "/to-o-i/" },
+            { jp: "速い (Hayai)", en: "Fast", p: "/ha-ya-i/" },
+            { jp: "ゆっくり (Yukkuri)", en: "Slowly", p: "/yuk-ku-ri/" },
+            { jp: "待って (Matte)", en: "Wait", p: "/mat-te/" },
+            { jp: "入って (Haitte)", en: "Come in", p: "/ha-it-te/" },
+            { jp: "出て (Dete)", en: "Go out", p: "/de-te/" },
+            { jp: "欲しい (Hoshii)", en: "I want", p: "/ho-shi-i/" }
+        ].map(p => ({ ...p, category: 'basic' }));
+
+        // 2. Japanese Filler Words Collection
+        const fillerWords = [
+            { jp: "あの... (Ano...)", en: "Umm... / Excuse me", p: "/a-no/", desc: "Used to politely get someone's attention or when you're hesitating/thinking of what to say.", category: 'filler' },
+            { jp: "えっと... (Etto...)", en: "Umm... / Let me see", p: "/et-to/", desc: "A very common sound to make when you are searching for the right words to say.", category: 'filler' },
+            { jp: "なんか (Nanka)", en: "Like / Sort of", p: "/nan-ka/", desc: "Casual filler word similar to 'like' in English. Used when you can't describe something perfectly.", category: 'filler' },
+            { jp: "そうですね (Sou desu ne)", en: "That's right / Let me think", p: "/so-u-de-su-ne/", desc: "Often used to agree with someone, or drawn out ('Soooo desu ne...') to buy time to think of an answer.", category: 'filler' },
+            { jp: "やっぱり (Yappari)", en: "As expected / After all", p: "/yap-pa-ri/", desc: "Used when things turn out exactly the way you thought they would.", category: 'filler' },
+            { jp: "ね (Ne)", en: "Right? / Isn't it?", p: "/ne/", desc: "Added to the end of a sentence to seek agreement or confirmation from the listener.", category: 'filler' },
+            { jp: "よ (Yo)", en: "Emphasis Marker", p: "/yo/", desc: "Added to the end of a sentence to state new information or emphasize a point strongly.", category: 'filler' },
+            { jp: "まあ... (Maa...)", en: "Well... / I guess", p: "/ma-a/", desc: "Used to soften a statement, or when you are compromising. 'Maa, ikka' (Well, whatever).", category: 'filler' },
+            { jp: "なるほど (Naruhodo)", en: "I see / Makes sense", p: "/na-ru-ho-do/", desc: "Used when you suddenly understand something that was just explained to you.", category: 'filler' },
+            { jp: "実は (Jitsu wa)", en: "Actually / To tell the truth", p: "/ji-tsu-wa/", desc: "Used before dropping a surprising fact, a confession, or giving a real reason.", category: 'filler' },
+            { jp: "とりあえず (Toriaezu)", en: "For now / Anyway", p: "/to-ri-a-e-zu/", desc: "Used when making a temporary decision. E.g., 'Toriaezu biiru' (I'll have a beer for now).", category: 'filler' },
+            { jp: "ていうか (Te iu ka)", en: "Or rather / I mean", p: "/te-i-u-ka/", desc: "Used to correct yourself, or to change the direction of the conversation playfully.", category: 'filler' },
+            { jp: "かも (Kamo)", en: "Maybe / Might be", p: "/ka-mo/", desc: "Short for 'kamoshirenai'. Added to the end of a sentence when you're not 100% sure.", category: 'filler' },
+            { jp: "っていう (Tte iu)", en: "Quote marker / They said", p: "/tte i-u/", desc: "Used to quote what someone else said, or to define something casually.", category: 'filler' }
+        ];
+
+        // Combine both lists
+        const allPhrases = [...originalPhrases, ...fillerWords];
+
+        const cuteIcons = ['🐰', '🌸', '🎀', '🧸', '🌷', '💕', '✨', '🍓','🐻', '🐱', '🐶', '🐥', '🐣','💗', '💖', '💘', '💞', '💓','🌼', '🌻', '🌺', '💐','🍑', '🍒', '🍬', '🍭', '🧁', '🍰','☁️', '🌈', '⭐', '🌙','🫶', '🤍', '💌','🎈', '🎁','🩷', '💟','🐾', '🦋'];
+
+        const grid = document.getElementById('phrase-grid');
+        const overlay = document.getElementById('modal-overlay');
+        const revealBtn = document.getElementById('reveal-btn');
+        const translationArea = document.getElementById('translation-area');
+        const searchInput = document.getElementById('search-input');
+        const searchDropdown = document.getElementById('search-dropdown');
+        const paginationControls = document.getElementById('pagination-controls');
+
+        // State variables
+        let activeFilter = 'all'; // 'all', 'basic', 'filler'
+        let currentData = allPhrases;
+        let currentPage = 1;
+        const itemsPerPage = 20;
+        
+        let currentModalPhrase = null;
+
+        // Filter Button Logic
+        document.querySelectorAll('.filter-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                // Style updates
+                document.querySelectorAll('.filter-btn').forEach(b => {
+                    b.classList.remove('bg-deepRose', 'text-white');
+                    b.classList.add('bg-white/80', 'text-gray-500');
+                });
+                e.target.classList.remove('bg-white/80', 'text-gray-500');
+                e.target.classList.add('bg-deepRose', 'text-white');
+
+                activeFilter = e.target.dataset.filter;
+                searchInput.value = ''; // Reset search when switching tabs
+                applyFilters();
+            });
+        });
+
+        // Core View Updater
+        function updateView(animate = true) {
+            const start = (currentPage - 1) * itemsPerPage;
+            const end = start + itemsPerPage;
+            const slicedData = currentData.slice(start, end);
+
+            renderGrid(slicedData);
+            renderPagination();
+
+            if (animate) {
+                anime({
+                    targets: '.phrase-card',
+                    scale: [0.9, 1],
+                    opacity: [0, 1],
+                    translateY: [20, 0],
+                    delay: anime.stagger(40),
+                    duration: 800,
+                    easing: 'easeOutQuart'
+                });
+            }
+        }
+
+        // Render Pagination Controls
+        function renderPagination() {
+            paginationControls.innerHTML = '';
+            const totalPages = Math.ceil(currentData.length / itemsPerPage);
+
+            if (totalPages <= 1) return;
+
+            for (let i = 1; i <= totalPages; i++) {
+                const btn = document.createElement('button');
+                btn.innerText = i;
+                
+                btn.className = `pagination-btn w-8 h-8 md:w-10 md:h-10 rounded-full font-bold text-sm md:text-base flex items-center justify-center transition-all duration-300 shadow-md cursor-none md:cursor-none border-2 border-white ${
+                    i === currentPage 
+                    ? 'bg-deepRose text-white transform scale-110 shadow-lg' 
+                    : 'bg-white/80 text-gray-500 hover:bg-petalPink hover:text-white hover:scale-105'
+                }`;
+
+                btn.addEventListener('click', () => {
+                    currentPage = i;
+                    updateView();
+                    document.getElementById('phrase-grid').scrollIntoView({ behavior: 'smooth', block: 'start' });
+                });
+
+                paginationControls.appendChild(btn);
+            }
+        }
+
+        // Render Grid Function
+        function renderGrid(phrasesToRender) {
+            grid.innerHTML = ''; 
+            
+            if (phrasesToRender.length === 0) {
+                grid.innerHTML = `<div class="col-span-full text-center text-petalPink font-sans mt-10 tracking-widest text-sm uppercase">No words found. 🐰</div>`;
+                return;
+            }
+
+            phrasesToRender.forEach((phrase) => {
+                const randomIcon = cuteIcons[Math.floor(Math.random() * cuteIcons.length)];
+                const isFiller = phrase.category === 'filler';
+                
+                const el = document.createElement('div');
+                el.className = 'phrase-card cursor-none md:cursor-none group cursor-pointer';
+                
+                // Constructing innerHTML with the Audio Button
+                el.innerHTML = `
+                    <div class="absolute -bottom-4 -right-2 text-5xl md:text-6xl opacity-[0.06] transform -rotate-12 transition-all duration-500 ease-out 
+                                group-hover:scale-110 group-hover:rotate-0 group-hover:opacity-[0.25] group-hover:-translate-y-2 group-hover:-translate-x-2 pointer-events-none">
+                        ${randomIcon}
+                    </div>
+
+                    <div class="absolute top-3 right-3 z-20">
+                        <button class="play-card-btn p-2 text-petalPink hover:text-deepRose transition-colors rounded-full play-btn cursor-none md:cursor-none">
+                            <i data-lucide="volume-2" class="w-4 h-4 md:w-5 md:h-5"></i>
+                        </button>
+                    </div>
+                    
+                    <span class="text-[8px] md:text-[9px] font-bold uppercase tracking-[0.3em] ${isFiller ? 'text-amber-400' : 'text-petalPink'} mb-2 md:mb-3 relative z-10 transition-colors duration-300 group-hover:text-heartPink">
+                        ${isFiller ? 'Filler Word' : 'Japanese'}
+                    </span>
+                    <h3 class="font-sans text-xl md:text-2xl font-bold text-center text-gray-700 relative z-10 transition-colors duration-300 group-hover:text-deepRose px-2">${phrase.jp}</h3>
+                `;
+                
+                // Open Modal Event
+                el.addEventListener('click', () => openModal(phrase));
+                
+                // Play Audio Event (stopPropagation to prevent opening modal)
+                const playCardBtn = el.querySelector('.play-card-btn');
+                playCardBtn.addEventListener('click', (e) => {
+                    playJapaneseAudio(phrase.jp, e);
+                });
+
+                grid.appendChild(el);
+            });
+            lucide.createIcons();
+        }
+
+        // Central Filter Logic
+        function applyFilters(query = '') {
+            let filtered = allPhrases;
+            
+            if (activeFilter !== 'all') {
+                filtered = filtered.filter(p => p.category === activeFilter);
+            }
+            
+            if (query.trim() !== '') {
+                const q = query.toLowerCase().trim();
+                filtered = filtered.filter(p => 
+                    p.jp.toLowerCase().includes(q) || 
+                    p.en.toLowerCase().includes(q)
+                );
+            }
+            
+            currentData = filtered;
+            currentPage = 1;
+            updateView(query.trim() === '' || searchDropdown.classList.contains('hidden'));
+        }
+
+        // Search Events
+        searchInput.addEventListener('input', (e) => {
+            const query = e.target.value;
+            searchDropdown.innerHTML = ''; 
+            
+            if (query.trim() === '') {
+                searchDropdown.classList.add('hidden');
+                applyFilters();
+                return;
+            }
+
+            // Get matches based on current filter + query
+            let matched = allPhrases;
+            if (activeFilter !== 'all') {
+                matched = matched.filter(p => p.category === activeFilter);
+            }
+            matched = matched.filter(p => p.jp.toLowerCase().includes(query.toLowerCase()) || p.en.toLowerCase().includes(query.toLowerCase()));
+
+            if (matched.length > 0) {
+                searchDropdown.classList.remove('hidden');
+                matched.slice(0, 5).forEach(match => { 
+                    const li = document.createElement('li');
+                    li.className = 'px-4 md:px-6 py-3 md:py-4 hover:bg-softPink cursor-pointer md:cursor-none border-b border-gray-50 transition-colors flex flex-col md:flex-row justify-center md:justify-between items-start md:items-center gap-1';
+                    li.innerHTML = `
+                        <span class="font-bold text-deepRose text-sm md:text-base">${match.jp}</span> 
+                        <span class="text-[10px] md:text-xs text-gray-400 uppercase tracking-wider">${match.en}</span>
+                    `;
+                    
+                    li.addEventListener('click', () => {
+                        searchInput.value = match.jp;
+                        searchDropdown.classList.add('hidden');
+                        applyFilters(match.jp);
+                    });
+                    
+                    searchDropdown.appendChild(li);
+                });
+            } else {
+                searchDropdown.classList.add('hidden');
+            }
+        });
+
+        searchInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                searchDropdown.classList.add('hidden');
+                applyFilters(searchInput.value);
+                searchInput.blur();
+            }
+        });
+        
+        document.addEventListener('click', (e) => {
+            if (!searchInput.contains(e.target) && !searchDropdown.contains(e.target)) {
+                searchDropdown.classList.add('hidden');
+            }
+        });
+
+        // Modal Logic
+        function openModal(phrase) {
+            currentModalPhrase = phrase;
+            
+            document.getElementById('modal-jp').innerText = phrase.jp;
+            document.getElementById('modal-en').innerText = phrase.en;
+            document.getElementById('modal-p').innerText = phrase.p;
+            
+            document.getElementById('modal-category').innerText = phrase.category === 'filler' ? 'Filler Word' : 'Japanese Phrase';
+            
+            const descEl = document.getElementById('modal-desc');
+            if (phrase.desc) {
+                descEl.innerText = `"${phrase.desc}"`;
+                descEl.classList.remove('hidden');
+            } else {
+                descEl.classList.add('hidden');
+            }
+            
+            overlay.style.display = 'flex';
+            translationArea.style.opacity = '0';
+            revealBtn.style.display = 'inline-block';
+            revealBtn.style.opacity = '1';
+
+            anime({
+                targets: '#modal-card',
+                translateY: [60, 0],
+                opacity: [0, 1],
+                duration: 800,
+                easing: 'easeOutElastic(1, .8)'
+            });
+        }
+
+        // Modal Play Button Event
+        document.getElementById('modal-play-btn').addEventListener('click', (e) => {
+            if (currentModalPhrase) {
+                playJapaneseAudio(currentModalPhrase.jp, e);
+            }
+        });
+
+        revealBtn.addEventListener('click', () => {
+            anime({
+                targets: revealBtn,
+                opacity: 0,
+                scale: 0.9,
+                duration: 400,
+                complete: () => {
+                    revealBtn.style.display = 'none';
+                    anime({
+                        targets: translationArea,
+                        opacity: 1,
+                        translateY: [15, 0],
+                        duration: 600,
+                        easing: 'easeOutQuart'
+                    });
+                }
+            });
+        });
+
+        document.getElementById('close-modal').addEventListener('click', () => {
+            anime({
+                targets: '#modal-card',
+                translateY: 20,
+                scale: 0.95,
+                opacity: 0,
+                duration: 300,
+                easing: 'easeInQuart',
+                complete: () => overlay.style.display = 'none'
+            });
+        });
+
+        // --- CURSOR SYSTEM ---
+        const cursorMain = document.getElementById('cursor-main');
+        const canvas = document.getElementById('cursor-canvas');
+        const ctx = canvas.getContext('2d');
+        let particles = [];
+        let mouse = { x: -100, y: -100 };
+        
+        const isTouchDevice = window.matchMedia("(hover: none) and (pointer: coarse)").matches;
+
+        if (!isTouchDevice) {
+            window.addEventListener('mousemove', e => {
+                mouse.x = e.clientX;
+                mouse.y = e.clientY;
+                cursorMain.style.left = mouse.x + 'px';
+                cursorMain.style.top = mouse.y + 'px';
+                spawnParticle();
+            });
+
+            function resize() {
+                canvas.width = window.innerWidth;
+                canvas.height = window.innerHeight;
+            }
+            window.addEventListener('resize', resize);
+            resize();
+
+            function spawnParticle() {
+                particles.push({
+                    x: mouse.x,
+                    y: mouse.y,
+                    size: Math.random() * 6 + 4,
+                    speedX: (Math.random() - 0.5) * 1.5,
+                    speedY: Math.random() * 2 + 1, 
+                    life: 1
+                });
+            }
+
+            function drawHeart(x, y, size, opacity) {
+                ctx.save();
+                ctx.translate(x, y);
+                ctx.rotate(Math.PI / 4);
+                ctx.beginPath();
+                ctx.moveTo(0, 0);
+                ctx.bezierCurveTo(-size / 2, -size / 2, -size, size / 3, 0, size);
+                ctx.bezierCurveTo(size, size / 3, size / 2, -size / 2, 0, 0);
+                ctx.fillStyle = `rgba(255, 77, 109, ${opacity})`;
+                ctx.fill();
+                ctx.restore();
+            }
+
+            function animate() {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                for (let i = 0; i < particles.length; i++) {
+                    let p = particles[i];
+                    drawHeart(p.x, p.y, p.size, p.life * 0.4);
+                    p.x += p.speedX;
+                    p.y += p.speedY;
+                    p.life -= 0.012;
+                    if (p.life <= 0) particles.splice(i, 1);
+                }
+                requestAnimationFrame(animate);
+            }
+            animate();
+        }
+
+        // Render initially and animate
+        window.addEventListener('load', () => {
+            applyFilters();
+        });
+    </script>
 </body>
 </html>
